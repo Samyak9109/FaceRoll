@@ -18,6 +18,7 @@ def serialize_doc(doc: dict[str, Any]) -> dict[str, Any]:
     if "student_id" in output and isinstance(output["student_id"], ObjectId):
         output["student_id"] = str(output["student_id"])
     output.pop("face_embedding_encrypted", None)
+    output.pop("face_embedding", None)
     return output
 
 
@@ -48,10 +49,6 @@ class StudentRepository:
             doc["_id"] = str(doc["_id"])
             students.append(doc)
         return students
-
-    async def get(self, student_id: str) -> dict[str, Any] | None:
-        doc = await self.db.students.find_one({"_id": oid(student_id)})
-        return serialize_doc(doc) if doc else None
 
     async def list_by_class(self, class_id: str) -> list[dict[str, Any]]:
         cursor = self.db.students.find({"class_id": class_id}).sort("roll_no", 1)
@@ -102,13 +99,18 @@ class AttendanceRepository:
         cursor = self.db.attendance.aggregate(pipeline)
         return [serialize_doc(doc) async for doc in cursor]
 
-    async def attendance_count(self, student_id: str, class_id: str, start: str, end: str) -> int:
-        return await self.db.attendance.count_documents(
-            {"student_id": oid(student_id), "class_id": class_id, "date": {"$gte": start, "$lte": end}, "status": "present"}
+    async def present_counts_by_student(self, class_id: str, start: str, end: str) -> tuple[dict[str, int], list[str]]:
+        cursor = self.db.attendance.find(
+            {"class_id": class_id, "date": {"$gte": start, "$lte": end}, "status": "present"},
+            {"student_id": 1, "date": 1},
         )
-
-    async def class_dates(self, class_id: str, start: str, end: str) -> list[str]:
-        return await self.db.attendance.distinct("date", {"class_id": class_id, "date": {"$gte": start, "$lte": end}})
+        counts: dict[str, int] = {}
+        dates: set[str] = set()
+        async for row in cursor:
+            student_id = str(row["student_id"])
+            counts[student_id] = counts.get(student_id, 0) + 1
+            dates.add(row["date"])
+        return counts, sorted(dates)
 
 
 class AuditRepository:

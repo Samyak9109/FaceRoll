@@ -15,11 +15,11 @@ async def generate_report_rows(db, class_id: str, start_date: str, end_date: str
     student_repo = StudentRepository(db)
     attendance_repo = AttendanceRepository(db)
     students = await student_repo.list_by_class(class_id)
-    class_dates = await attendance_repo.class_dates(class_id, start_date, end_date)
+    counts_by_student, class_dates = await attendance_repo.present_counts_by_student(class_id, start_date, end_date)
     total_days = max(len(class_dates), 1)
     rows = []
     for student in students:
-        present_days = await attendance_repo.attendance_count(student["_id"], class_id, start_date, end_date)
+        present_days = counts_by_student.get(student["_id"], 0)
         rows.append(
             {
                 "student_id": student["_id"],

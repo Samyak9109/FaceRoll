@@ -26,6 +26,7 @@ flowchart LR
 - Teacher auth is intentionally simple: one username/password from `.env` and JWT for API calls.
 - Recognition threshold is configurable with `RECOGNITION_THRESHOLD`, default `0.60`.
 - LangChain uses Ollama by default and can switch to OpenAI or Anthropic via env vars.
+- Class IDs are free-text values in this prototype; a dedicated `classes` collection can be added when class scheduling is implemented.
 
 ## Project Structure
 
@@ -159,7 +160,6 @@ The React app supports:
 | `GET` | `/attendance/{class_id}/{date}` | Attendance rows for a class/date |
 | `POST` | `/agent/query` | LangChain natural language query |
 | `GET` | `/report/{class_id}?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | CSV export |
-| `GET` | `/absentees/{class_id}/{date}` | Students not present on a date |
 
 ## Tests
 

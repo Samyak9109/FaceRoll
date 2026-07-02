@@ -6,8 +6,8 @@ from fastapi.responses import Response
 from app.api.deps import current_teacher, database
 from app.core.config import get_settings
 from app.core.rate_limit import recognition_limiter
-from app.db.reports import generate_report_rows, get_absentees, rows_to_csv
-from app.db.repositories import AttendanceRepository, AuditRepository, StudentRepository
+from app.db.reports import generate_report_rows, rows_to_csv
+from app.db.repositories import AttendanceRepository, AuditRepository, StudentRepository, serialize_doc
 from app.models.schemas import AgentAnswer, AgentQuery, AttendanceOut, RecognitionResult, StudentOut
 from app.services.face_embedder import FaceEmbeddingError, face_embedder
 from app.services.matcher import find_best_match
@@ -25,8 +25,6 @@ async def enroll(
     photo: UploadFile = File(...),
     db=Depends(database),
 ) -> dict:
-    if not consent:
-        raise HTTPException(status_code=400, detail="Consent is required for enrollment")
     image = await photo.read()
     try:
         embedding = face_embedder.extract_from_bytes(image)
@@ -61,10 +59,9 @@ async def recognize(
 
     attendance, inserted = await AttendanceRepository(db).mark_present(match["_id"], class_id)
     await AuditRepository(db).log_attempt(class_id, True, score, match["_id"])
-    student = await student_repo.get(match["_id"])
     return RecognitionResult(
         matched=True,
-        student=StudentOut.model_validate(student),
+        student=StudentOut.model_validate(serialize_doc(match)),
         score=score,
         attendance_marked=inserted,
         message="Attendance marked" if inserted else "Attendance already marked for today",
@@ -99,8 +96,3 @@ async def report(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{class_id}-attendance.csv"'},
     )
-
-
-@router.get("/absentees/{class_id}/{attendance_date}")
-async def absentees(class_id: str, attendance_date: str, db=Depends(database)) -> list[dict]:
-    return await get_absentees(db, class_id, attendance_date)

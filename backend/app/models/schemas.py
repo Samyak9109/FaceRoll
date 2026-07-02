@@ -1,5 +1,4 @@
-from datetime import date, datetime
-from typing import Any
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -12,13 +11,6 @@ class TokenResponse(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-
-
-class StudentCreate(BaseModel):
-    name: str
-    roll_no: str
-    class_id: str
-    consent: bool = Field(..., description="Explicit biometric enrollment consent")
 
 
 class StudentOut(BaseModel):
@@ -61,10 +53,3 @@ class AgentQuery(BaseModel):
 
 class AgentAnswer(BaseModel):
     answer: str
-    raw: Any | None = None
-
-
-class ManualMarkRequest(BaseModel):
-    student_id: str
-    class_id: str
-    date: date | None = None

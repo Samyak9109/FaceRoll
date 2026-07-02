@@ -4,6 +4,7 @@ import pytest
 from mongomock_motor import AsyncMongoMockClient
 
 from app.db.reports import get_absentees
+from app.db.reports import generate_report_rows
 from app.db.repositories import AttendanceRepository, StudentRepository
 
 
@@ -33,3 +34,25 @@ async def test_student_attendance_and_absentee_query(monkeypatch):
 
     absentees = await get_absentees(db, "CS101", "2026-07-02")
     assert [student["_id"] for student in absentees] == [bob["_id"]]
+
+    rows = await generate_report_rows(db, "CS101", "2026-07-01", "2026-07-31")
+    assert rows == [
+        {
+            "student_id": alice["_id"],
+            "name": "Alice",
+            "roll_no": "45",
+            "class_id": "CS101",
+            "present_days": 1,
+            "total_recorded_days": 1,
+            "attendance_percent": 100.0,
+        },
+        {
+            "student_id": bob["_id"],
+            "name": "Bob",
+            "roll_no": "46",
+            "class_id": "CS101",
+            "present_days": 0,
+            "total_recorded_days": 1,
+            "attendance_percent": 0.0,
+        },
+    ]
