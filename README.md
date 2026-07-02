@@ -41,6 +41,7 @@ backend/
     services/     face embedding, encryption, matching
   scripts/        standalone embedding extraction
 frontend/         React + Vite dashboard
+  Dockerfile      Production nginx container for the dashboard
 models/           reserved for local model artifacts
 tests/            matcher and Mongo repository tests
 ```
@@ -56,13 +57,17 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 Paste the generated key into `EMBEDDING_ENCRYPTION_KEY`.
 
-2. Start MongoDB and backend with Docker.
+2. Start the full Docker stack.
 
 ```bash
 docker compose up --build
 ```
 
-3. Or run locally.
+This starts MongoDB, the FastAPI backend on `http://localhost:8000`, and the dashboard on `http://localhost:5173`.
+
+For a non-local host, set `FRONTEND_API_BASE` in `.env` before building so the static frontend calls the correct backend URL.
+
+3. Or run the backend locally.
 
 ```bash
 python -m venv .venv
@@ -148,7 +153,18 @@ The React app supports:
 
 ### 8. Docker
 
-`docker-compose.yml` runs MongoDB and the backend. The frontend is run separately with Vite during local development.
+`docker-compose.yml` runs MongoDB, the backend, and the production frontend container. Health checks are configured so the frontend waits for the API and the API waits for MongoDB.
+
+```bash
+docker compose up --build
+```
+
+The frontend container serves the built React app through nginx. For deployment behind a different hostname, set:
+
+```bash
+FRONTEND_API_BASE=https://your-api-host.example.com
+CORS_ORIGINS=https://your-dashboard-host.example.com
+```
 
 ## API Summary
 
