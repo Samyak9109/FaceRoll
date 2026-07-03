@@ -7,7 +7,7 @@ Local-first facial recognition attendance app with FastAPI, MongoDB, FaceNet emb
 ```mermaid
 flowchart LR
   Teacher[Teacher Dashboard] -->|JWT + multipart frames| API[FastAPI]
-  API --> Auth[Simple Teacher Auth]
+  API --> Auth[Role-based Auth]
   API --> Face[FaceNet: MTCNN + InceptionResnetV1]
   Face --> Match[Cosine Similarity Matcher]
   Match --> Mongo[(MongoDB)]
@@ -72,7 +72,7 @@ For a non-local host, set `FRONTEND_API_BASE` in `.env` before building so the s
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 uvicorn app.main:app --app-dir backend --reload
 ```
 
@@ -141,7 +141,7 @@ Use `docker compose down -v` only when you intentionally want to delete the Mong
 | --- | --- | --- |
 | `MONGO_URI` | Yes | MongoDB connection string. Compose overrides this to `mongodb://mongo:27017` for the backend container. |
 | `MONGO_DB` | Yes | Database name. |
-| `JWT_SECRET` | Yes | Signs teacher JWTs. Use a strong deployment secret. |
+| `JWT_SECRET` | Yes | Signs role-based JWTs. Use a strong deployment secret. |
 | `ADMIN_USERNAME` | Yes | Bootstrap admin login username. |
 | `ADMIN_PASSWORD` | Yes | Bootstrap admin login password. |
 | `ADMIN_NAME` | Yes | Bootstrap admin display name. |
@@ -215,12 +215,12 @@ curl -X POST http://localhost:8000/agent/query \
 
 The React app supports:
 
-- Teacher login
+- Admin dashboard for teacher, class, and student enrollment
+- Teacher dashboard with assigned-class attendance sessions
+- Student dashboard with attended and missed class records
 - Webcam capture and recognition overlay result
-- Student enrollment with consent checkbox
-- Attendance table per class/date
-- Natural-language agent chat
-- CSV export button
+- Attendance table per class/date and CSV export
+- Natural-language attendance chat for teacher/admin users
 
 ### 8. Docker
 

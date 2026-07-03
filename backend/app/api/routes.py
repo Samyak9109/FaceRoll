@@ -102,7 +102,9 @@ async def enroll(
     _: dict = Depends(require_roles("admin")),
 ) -> dict:
     image = await photo.read()
+    user = None
     try:
+        embedding = face_embedder.extract_from_bytes(image)
         user = await UserRepository(db).create(
             username=username,
             password=password,
@@ -110,7 +112,6 @@ async def enroll(
             name=name,
             assigned_classes=[class_id],
         )
-        embedding = face_embedder.extract_from_bytes(image)
         student = await StudentRepository(db).create(name, roll_no, class_id, consent, embedding, user["_id"])
         await UserRepository(db).set_student_id(user["_id"], student["_id"])
         return student
@@ -119,22 +120,9 @@ async def enroll(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except DuplicateKeyError as exc:
+        if user is not None:
+            await UserRepository(db).delete(user["_id"])
         raise HTTPException(status_code=409, detail="Student username or roll number already exists") from exc
-
-
-@router.post("/enroll", response_model=StudentOut)
-async def legacy_enroll(
-    username: str = Form(...),
-    password: str = Form(...),
-    name: str = Form(...),
-    roll_no: str = Form(...),
-    class_id: str = Form(...),
-    consent: bool = Form(...),
-    photo: UploadFile = File(...),
-    db=Depends(database),
-    admin: dict = Depends(require_roles("admin")),
-) -> dict:
-    return await enroll(username, password, name, roll_no, class_id, consent, photo, db, admin)
 
 
 @router.post("/recognize", response_model=RecognitionResult)
@@ -187,9 +175,9 @@ async def attendance(
 async def agent_query(
     payload: AgentQuery,
     db=Depends(database),
-    _: dict = Depends(require_roles("teacher", "admin")),
+    user: dict = Depends(require_roles("teacher", "admin")),
 ) -> AgentAnswer:
-    answer = await run_agent_query(db, payload.query)
+    answer = await run_agent_query(db, payload.query, user)
     return AgentAnswer(answer=answer)
 
 
@@ -224,6 +212,7 @@ async def teacher_classes(db=Depends(database), user: dict = Depends(require_rol
 @router.get("/teacher/dashboard")
 async def teacher_dashboard(
     class_id: str | None = None,
+    attendance_date: date | None = None,
     db=Depends(database),
     user: dict = Depends(require_roles("teacher", "admin")),
 ) -> dict:
@@ -235,24 +224,30 @@ async def teacher_dashboard(
     today = date.today()
     start = (today - timedelta(days=13)).isoformat()
     end = today.isoformat()
+    selected_date = (attendance_date or today).isoformat()
     daily = await AttendanceRepository(db).daily_counts_for_classes(class_ids, start, end) if class_ids else []
-    classes = await ClassRepository(db).list_all() if user["role"] == "admin" else await ClassRepository(db).list_for_teacher(user)
+    class_repo = ClassRepository(db)
+    student_repo = StudentRepository(db)
+    attendance_repo = AttendanceRepository(db)
+    classes = await class_repo.list_all() if user["role"] == "admin" else await class_repo.list_for_teacher(user)
+    selected_class_ids = [row["class_id"] for row in classes if not class_ids or row["class_id"] in class_ids]
+    student_counts = await student_repo.counts_by_class(selected_class_ids)
+    present_counts = await attendance_repo.present_counts_for_date(selected_class_ids, selected_date)
     class_summaries = []
     for row in classes:
         if class_ids and row["class_id"] not in class_ids:
             continue
-        students = await StudentRepository(db).list_by_class(row["class_id"])
-        present_today = await AttendanceRepository(db).get_for_class_date(row["class_id"], end)
         class_summaries.append(
             {
                 "class_id": row["class_id"],
                 "name": row["name"],
                 "subject": row["subject"],
-                "students": len(students),
-                "present_today": len(present_today),
+                "students": student_counts.get(row["class_id"], 0),
+                "present_today": present_counts.get(row["class_id"], 0),
             }
         )
-    return {"classes": class_summaries, "daily": daily}
+    attendance_rows = await attendance_repo.get_for_class_date(class_ids[0], selected_date) if len(class_ids) == 1 else []
+    return {"classes": class_summaries, "daily": daily, "attendance": attendance_rows}
 
 
 @router.get("/student/dashboard")
@@ -260,11 +255,11 @@ async def student_dashboard(db=Depends(database), user: dict = Depends(require_r
     student = await StudentRepository(db).get_by_user(user["_id"])
     if student is None:
         raise HTTPException(status_code=404, detail="Student profile not found")
-    attendance_rows = await AttendanceRepository(db).get_for_student(student["_id"])
     attendance_repo = AttendanceRepository(db)
+    attendance_rows = await attendance_repo.get_for_student(student["_id"])
     class_dates = await attendance_repo.present_dates_for_student_class(student["_id"], student["class_id"])
     recorded_dates = await attendance_repo.recorded_dates_for_class(student["class_id"])
-    all_class_attendance = await AttendanceRepository(db).get_for_class_date(student["class_id"], date.today().isoformat())
+    all_class_attendance = await attendance_repo.get_for_class_date(student["class_id"], date.today().isoformat())
     today_present = any(row["student_id"] == student["_id"] for row in all_class_attendance)
     missed_dates = sorted(recorded_dates - class_dates, reverse=True)
     return {

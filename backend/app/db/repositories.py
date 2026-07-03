@@ -79,6 +79,9 @@ class UserRepository:
     async def set_student_id(self, user_id: str, student_id: str) -> None:
         await self.db.users.update_one({"_id": oid(user_id)}, {"$set": {"student_id": oid(student_id)}})
 
+    async def delete(self, user_id: str) -> None:
+        await self.db.users.delete_one({"_id": oid(user_id)})
+
 
 class ClassRepository:
     def __init__(self, db: Any) -> None:
@@ -167,6 +170,16 @@ class StudentRepository:
         doc = await self.db.students.find_one({"user_id": oid(user_id)})
         return serialize_doc(doc) if doc else None
 
+    async def counts_by_class(self, class_ids: list[str]) -> dict[str, int]:
+        if not class_ids:
+            return {}
+        pipeline = [
+            {"$match": {"class_id": {"$in": class_ids}}},
+            {"$group": {"_id": "$class_id", "count": {"$sum": 1}}},
+        ]
+        cursor = self.db.students.aggregate(pipeline)
+        return {row["_id"]: row["count"] async for row in cursor}
+
 
 class AttendanceRepository:
     def __init__(self, db: Any) -> None:
@@ -248,6 +261,16 @@ class AttendanceRepository:
             {"class_id": row["_id"]["class_id"], "date": row["_id"]["date"], "present": row["present"]}
             async for row in cursor
         ]
+
+    async def present_counts_for_date(self, class_ids: list[str], attendance_date: str) -> dict[str, int]:
+        if not class_ids:
+            return {}
+        pipeline = [
+            {"$match": {"class_id": {"$in": class_ids}, "date": attendance_date, "status": "present"}},
+            {"$group": {"_id": "$class_id", "present": {"$sum": 1}}},
+        ]
+        cursor = self.db.attendance.aggregate(pipeline)
+        return {row["_id"]: row["present"] async for row in cursor}
 
 
 class AuditRepository:

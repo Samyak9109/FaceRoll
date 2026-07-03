@@ -20,11 +20,11 @@ def _llm():
     return ChatOllama(model=settings.llm_model, temperature=0)
 
 
-async def run_agent_query(db, query: str) -> str:
+async def run_agent_query(db, query: str, user: dict) -> str:
     from langchain.agents import AgentExecutor, create_tool_calling_agent
     from langchain_core.prompts import ChatPromptTemplate
 
-    tools = build_tools(db)
+    tools = build_tools(db, user)
     prompt = ChatPromptTemplate.from_messages(
         [
             (
