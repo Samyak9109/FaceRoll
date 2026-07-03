@@ -4,7 +4,7 @@ import { Upload, UserPlus } from "lucide-react";
 import { apiForm } from "../lib/api";
 
 export function EnrollPanel({ token, defaultClassId }) {
-  const [form, setForm] = useState({ name: "", roll_no: "", class_id: defaultClassId, consent: true });
+  const [form, setForm] = useState({ username: "", password: "", name: "", roll_no: "", class_id: defaultClassId, consent: true });
   const [photo, setPhoto] = useState(null);
   const [message, setMessage] = useState("");
 
@@ -17,8 +17,10 @@ export function EnrollPanel({ token, defaultClassId }) {
     data.append("photo", photo);
 
     try {
-      const payload = await apiForm("/enroll", data, token);
+      const payload = await apiForm("/admin/students/enroll", data, token);
       setMessage(`Enrolled ${payload.name}`);
+      setForm({ username: "", password: "", name: "", roll_no: "", class_id: defaultClassId, consent: true });
+      setPhoto(null);
     } catch (error) {
       setMessage(error.message);
     }
@@ -27,6 +29,8 @@ export function EnrollPanel({ token, defaultClassId }) {
   return (
     <form className="panel enroll" onSubmit={enroll}>
       <h2><UserPlus size={19} /> Student Enrollment</h2>
+      <label>Login Username<input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></label>
+      <label>Login Password<input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></label>
       <label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
       <label>Roll No<input value={form.roll_no} onChange={(e) => setForm({ ...form, roll_no: e.target.value })} required /></label>
       <label>Class<input value={form.class_id} onChange={(e) => setForm({ ...form, class_id: e.target.value })} required /></label>

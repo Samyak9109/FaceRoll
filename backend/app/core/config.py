@@ -13,8 +13,9 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default="change-me-in-production", alias="JWT_SECRET")
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 480
-    teacher_username: str = Field(default="teacher", alias="TEACHER_USERNAME")
-    teacher_password: str = Field(default="teacher123", alias="TEACHER_PASSWORD")
+    admin_username: str = Field(default="admin", alias="ADMIN_USERNAME")
+    admin_password: str = Field(default="change-this-admin-password", alias="ADMIN_PASSWORD")
+    admin_name: str = Field(default="System Admin", alias="ADMIN_NAME")
     embedding_encryption_key: str = Field(default="", alias="EMBEDDING_ENCRYPTION_KEY")
     recognition_threshold: float = Field(default=0.60, alias="RECOGNITION_THRESHOLD")
     recognition_rate_limit_per_minute: int = Field(default=30, alias="RECOGNITION_RATE_LIMIT_PER_MINUTE")

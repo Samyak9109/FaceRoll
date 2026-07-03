@@ -4,8 +4,8 @@ import { LogIn, ShieldCheck } from "lucide-react";
 import { apiJson } from "../lib/api";
 
 export function Login({ onLogin }) {
-  const [username, setUsername] = useState("teacher");
-  const [password, setPassword] = useState("teacher123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   async function submit(event) {
@@ -13,8 +13,8 @@ export function Login({ onLogin }) {
     setError("");
     try {
       const data = await apiJson("/auth/login", { method: "POST", body: { username, password } });
-      localStorage.setItem("token", data.access_token);
-      onLogin(data.access_token);
+      localStorage.setItem("session", JSON.stringify(data));
+      onLogin(data);
     } catch {
       setError("Invalid credentials");
     }
@@ -29,11 +29,11 @@ export function Login({ onLogin }) {
         <h1>Face Attendance</h1>
         <label>
           Username
-          <input value={username} onChange={(event) => setUsername(event.target.value)} />
+          <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
         </label>
         <label>
           Password
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
         </label>
         {error && <p className="error">{error}</p>}
         <button className="primary" type="submit">

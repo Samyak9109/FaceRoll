@@ -5,7 +5,7 @@ from mongomock_motor import AsyncMongoMockClient
 
 from app.db.reports import get_absentees
 from app.db.reports import generate_report_rows
-from app.db.repositories import AttendanceRepository, StudentRepository
+from app.db.repositories import AttendanceRepository, ClassRepository, StudentRepository, UserRepository
 
 
 @pytest.mark.asyncio
@@ -56,3 +56,36 @@ async def test_student_attendance_and_absentee_query(monkeypatch):
             "attendance_percent": 0.0,
         },
     ]
+
+
+@pytest.mark.asyncio
+async def test_user_authentication_and_class_assignment():
+    client = AsyncMongoMockClient()
+    db = client["face_attendance_auth_test"]
+    await db.users.create_index("username", unique=True)
+    await db.classes.create_index("class_id", unique=True)
+
+    users = UserRepository(db)
+    classes = ClassRepository(db)
+
+    teacher = await users.create(
+        username="teacher.cs",
+        password="secure-password",
+        role="teacher",
+        name="CS Teacher",
+        subject="Computer Science",
+    )
+    assert "password_hash" not in teacher
+
+    authenticated = await users.authenticate("teacher.cs", "secure-password")
+    assert authenticated["_id"] == teacher["_id"]
+    assert authenticated["role"] == "teacher"
+    assert "password_hash" not in authenticated
+
+    assert await users.authenticate("teacher.cs", "wrong-password") is None
+
+    created_class = await classes.create("CS101", "Intro CS", "Computer Science", teacher["_id"])
+    assert created_class["class_id"] == "CS101"
+
+    updated_teacher = await users.get(teacher["_id"])
+    assert updated_teacher["assigned_classes"] == ["CS101"]

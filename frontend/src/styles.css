@@ -15,6 +15,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -42,6 +43,12 @@ button:hover {
   color: white;
 }
 
+.danger {
+  border-color: #a4482a;
+  background: #a4482a;
+  color: white;
+}
+
 .ghost {
   background: transparent;
 }
@@ -55,6 +62,7 @@ label {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid #c9d2cd;
@@ -140,7 +148,7 @@ h2 {
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto auto;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   align-items: end;
   gap: 12px;
   padding: 14px;
@@ -154,6 +162,36 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
   gap: 18px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px 10px;
+  min-height: 86px;
+  padding: 16px;
+  border: 1px solid #c5cfca;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.stat span {
+  color: #52615a;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.stat strong {
+  grid-column: 1 / -1;
+  font-size: 1.6rem;
+  line-height: 1;
 }
 
 .panel,
@@ -268,10 +306,29 @@ pre {
   color: #26322d;
 }
 
+.record-list {
+  display: grid;
+  gap: 8px;
+}
+
+.record-list h3 {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: #52615a;
+}
+
+.record-list p {
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #f0f3f1;
+  color: #26322d;
+}
+
 @media (max-width: 850px) {
   .topbar,
   .grid,
   .content-grid,
+  .summary-grid,
   .toolbar {
     grid-template-columns: 1fr;
   }
